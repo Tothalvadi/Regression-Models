@@ -10,9 +10,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Executive summary
-Taking several attributes in account; MPG can be affected by the weight and the transmission of the car. Manual transmission is better for lighter cars and automatic functions better for heavy vehicles. 
+Taking several attributes in account; MPG can be affected by the weight and the transmission of the car. A higher intercept and steeper slope shows that a manual transmission is only beneficial for lighter weight cars. Heavier cars benefit from an automatic transmission with a lower intercept and lighter slope.
 
 ## Main analysis
+### Data exploration
 ```{r echo=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
@@ -22,26 +23,15 @@ mtdata  <- mutate(mtcars
                   , am = factor(ifelse(am ==  0, "Automatic", "Manual"))
 )
 ```
-We make a small alteration to our dataset. The standard variables of am are 0 (automatic) and 1(manual), we'll rename those to their actual descriptions to prevent confusion.
-Let's take a look at the mpg for automatic vs manual transmission. 
+We make a small alteration to our dataset. The standard variables of am are 0 (automatic) and 1(manual), we'll rename those to their actual descriptions to prevent confusion. (See Appendix, Datsets)
+Let's take a look at the mpg for automatic vs manual transmission. (See Appendix, Figure 1)
 
-```{r in-text-fig, echo = FALSE, fig.width=3, fig.height= 1.5 }
-g <- ggplot(data = mtdata, aes(x = am, y = mpg)) + xlab(NULL) + ylab(NULL) + ggtitle("MPG vs Transmission")
-print(g+ geom_boxplot())
-``` 
-
-It's clear that if you just look at the transmission, an automatic transmission has a much lower MPG than a manual one. But of course there are other attributes which might have something to do with this. Let's take a look at the complete set. We'll see the various measures vs mpg with the transmission as a color. We'll also include a regression line for these variables.
-
-```{r fig.width= 7, fig.height=2.5, echo = FALSE }
-g <-  ggplot(data = melt(mtdata, id=c("mpg", "am")), aes(x = as.integer(value), y = mpg))
-g <- g + geom_smooth(method = "lm", se = FALSE, color = "gray") 
-g <- g +  geom_point(aes(color = am)) + facet_wrap(~variable, scales="free_x", ncol=5) + ggtitle("MPG vs other attributes in the dataset. Transmission in colors.") + xlab("Attribute value")
-print(g)
-```
+It's clear that if you just look at the transmission, an automatic transmission has a much lower MPG than a manual one. But of course there are other attributes which might have something to do with this. Let's take a look at the complete set. We'll see the various measures vs mpg with the transmission as a color. We'll also include a regression line for these variables. (See appendix A, Figure 2)  
 
 So what do we see? first of all we see that most of the heavier vehicles tend to have an automatic transmission. This seems to match with the displacement and the number of cylinders. Displacement is the total volume of the cylinders, so this is not very surprising. A higher displacement, and weight have a negative influence on the MPG. 
 One value with outliers is the HP, it seems there are some manuals that have a higher horsepower than automatics. This doesn't always match up with the weight. It seems there are some cars with a low weight but high horsepower. One more attribute of interest is 1/4 mile time (qsec), it seems they follow the same slope but have a completely different intercept.
 
+###Model building
 So what will we assume for this model? Our analysis shows that mpg is influenced by weight, displacement, horsepower and qsec. Weight and displacement have a correlation of `r round(cor(mtdata$wt, mtdata$disp),2)` and is considered highly related so it's enough to just take weight. We'll set up several models and run them through ANOVA to see what influences we can find. We'll start with weight since it has such a big impact on the mpg, next we'll add hp and qsec.
 
 ```{r echo=FALSE}
@@ -52,16 +42,16 @@ anova(fitwt, fitwthp, fitwthpqsec)
 ```
 As the analysis shows, a combination of all three is most succesful. Every addition of an attribute decreases our variance significantly. 
 
-Let's take a look at the residuals in our model: 
+Let's take a look at the residuals in our model (See Appendix, figure 3)
 
-```{r echo = FALSE, fig.height = 2}
-g <- ggplot(data = NULL, aes(x = rep(1:32), y = resid(fitwthpqsec))) 
-g <- g + geom_point(aes(color=mtdata$am)) 
-g <- g + geom_hline(yintercept=0) + ylab("mpg") + xlab("index") + ggtitle("Residuals MPG")
-print(g)
+The remaining variance seems to be evenly distributed with one outlier in the top. Let's take a look at the output when we remove/add elements with the dffits function: 
+```{r }
+mtdata$fits <-dffits(fitwthpqsec) 
+kable(mtdata[abs(mtdata$fits)>1, c("mpg", "wt", "hp", "qsec", "fits")])
 ```
 
-The remaining variance seems to be evenly distributed with one outlier in the top. 
+There are only 4 cars who have more than 1 mpg impact when removed from the equation. The biggest culprit is a car with low weight and high horsepower. One of the outliers we saw during our data exploration. 
+
 What are our coefficients and confidence intervals?
 
 ```{r echo = FALSE}
@@ -71,21 +61,48 @@ colnames(results)[5] <- "Description"
 kable(results)
 ```
 
+Our confidence intervals show that the Intercept (both for automatic and the difference with manual) and the covariates wt(automatic and manual difference) and qsec will have a consistent influence (either negative or positive) with 95% certainty.  
+
+###Conclusion
 There's definitely a difference between automatic and manual. The model for manual cars shows that they start with a higher initial MPG. But (with all other variables remaining equal) an increase in 1000 lbs for an automatic results in a 2.5 decrease in MPG. The same increase in weight for a manual car would result in 2.5 + 5.2 = 7.7 decrease in MPG. 
 The other variable of interest is the 1/4 mile time, but this variable does not have a seperate covariate for manual cars and applies for both transmissions. 
 These covariates all have confidence intervals that do not contain 0, and are therefore significant enough to be mentioned. Other variables do not have enough effect. 
 
-So what can we conclude? If you're driving a small car, you're beter off with a manual transmission. But when you're driving a heavy car, you're better off switching to an automatic.
+So what can we conclude? If you're driving a small car, you're beter off with a manual transmission. But when you're driving a heavy car, you're better off switching to an automatic. Keep in mind that a higher 1/4 mile time will also have a slightly positive influence on your mpg. 
 
-##Appendix
+\pagebreak
+
+##Appendix A
 ###Original files
 Because of the limit imposed on the number of pages, I've made the original files available in a github repository: **<https://github.com/Tothalvadi/Regression-Models>**
 The code can be found in the rmd file.
 
-###Setting up the dataset
+###Dataset
 Below the alterations I made to the original dataset. 0 values in AM are translated to "Automatic" and other values to "Manual"
 ```{r eval=FALSE}
 mtdata  <- mutate(mtcars
                   , am = factor(ifelse(am ==  0, "Automatic", "Manual"))
 )
+```
+
+###Figure 1
+```{r in-text-fig, echo = FALSE, fig.width=5, fig.height= 3 }
+g <- ggplot(data = mtdata, aes(x = am, y = mpg)) + xlab(NULL) + ylab(NULL) + ggtitle("MPG vs Transmission")
+print(g+ geom_boxplot())
+``` 
+
+###Figure 2
+```{r fig.width= 7, fig.height=5, echo = FALSE }
+g <-  ggplot(data = melt(mtdata, id=c("mpg", "am")), aes(x = as.integer(value), y = mpg))
+g <- g + geom_smooth(method = "lm", se = FALSE, color = "gray") 
+g <- g +  geom_point(aes(color = am)) + facet_wrap(~variable, scales="free_x") + ggtitle("MPG vs other attributes in the dataset. Transmission in colors.") + xlab("Attribute value")
+print(g)
+```
+
+###Figure 3
+```{r echo = FALSE, fig.height = 3}
+g <- ggplot(data = NULL, aes(x = rep(1:32), y = resid(fitwthpqsec))) 
+g <- g + geom_point(aes(color=mtdata$am)) 
+g <- g + geom_hline(yintercept=0) + ylab("mpg") + xlab("index") + ggtitle("Residuals MPG") +scale_color_discrete(name="Transmission")
+print(g)
 ```
