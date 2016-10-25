@@ -46,8 +46,9 @@ Let's take a look at the residuals in our model (See Appendix, figure 3)
 
 The remaining variance seems to be evenly distributed with one outlier in the top. Let's take a look at the output when we remove/add elements with the dffits function: 
 ```{r }
-mtdata$fits <-dffits(fitwthpqsec) 
-kable(mtdata[abs(mtdata$fits)>1, c("mpg", "wt", "hp", "qsec", "fits")])
+mtdatashow <- mtdata
+mtdatashow$fits <-dffits(fitwthpqsec) 
+kable(mtdatashow[abs(mtdatashow$fits)>1, c("mpg", "wt", "hp", "qsec", "fits")])
 ```
 
 There are only 4 cars who have more than 1 mpg impact when removed from the equation. The biggest culprit is a car with low weight and high horsepower. One of the outliers we saw during our data exploration. 
