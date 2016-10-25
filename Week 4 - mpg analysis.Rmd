@@ -93,8 +93,8 @@ print(g+ geom_boxplot())
 
 ###Figure 2
 ```{r fig.width= 7, fig.height=5, echo = FALSE }
-g <-  ggplot(data = melt(mtdata, id=c("mpg", "am")), aes(x = as.integer(value), y = mpg))
-g <- g + geom_smooth(method = "lm", se = FALSE, color = "gray") 
+g <-  ggplot(data = melt(mtdata, id=c("mpg", "am")), aes(x = value, y = mpg))
+g <- g + geom_smooth(method = "lm", se = FALSE, aes(color = am)) 
 g <- g +  geom_point(aes(color = am)) + facet_wrap(~variable, scales="free_x") + ggtitle("MPG vs other attributes in the dataset. Transmission in colors.") + xlab("Attribute value")
 print(g)
 ```
